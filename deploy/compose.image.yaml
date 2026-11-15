@@ -1,0 +1,9 @@
+# Apply after the server's compose.yaml and compose.override.yaml.
+services:
+  api:
+    image: ${EMS_IMAGE:-ghcr.io/ankarafelissi/microems:latest}
+    build: !reset null
+
+  frontend:
+    image: ${EMS_IMAGE:-ghcr.io/ankarafelissi/microems:latest}
+    volumes: !reset []

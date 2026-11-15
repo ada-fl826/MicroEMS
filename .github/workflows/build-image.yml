@@ -1,22 +1,65 @@
-name: Build and deploy EMS
+name: Test, build and deploy EMS
 
 on:
   push:
+    branches: [main]
+  pull_request:
     branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: read
-  packages: write
 
 concurrency:
-  group: ems-production
+  group: ems-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: false
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      EMS_TEST_INFLUXDB: "0"
+      OMP_NUM_THREADS: "1"
+      OPENBLAS_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: |
+            deploy/requirements.txt
+            requirements.txt
+
+      - name: Install test dependencies
+        run: |
+          python -m pip install torch==2.11.0 --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install -r deploy/requirements.txt httpx==0.28.1
+          python -m pip check
+
+      # Model and full UI tests require private trained weights in outputs/.
+      - name: Test forecast evaluation
+        run: python -m unittest discover -s tests -p test_evaluation.py -v
+
+      - name: Test storage and API failures
+        run: python -m unittest discover -s tests -p test_repository.py -v
+
+      - name: Test telemetry publication and recovery
+        run: python -m unittest discover -s tests -p test_telemetry.py -v
+
   build:
+    needs: test
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
     outputs:
       image: ${{ steps.image.outputs.name }}
       digest: ${{ steps.publish.outputs.digest }}

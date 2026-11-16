@@ -1,0 +1,61 @@
+{
+  "source_info": {
+    "forecast_method": "trained_lstm_transformer_and_lstm",
+    "pv_model": "outputs/pv/best_model.pt (LSTM-Transformer)",
+    "load_model": "outputs/load/best_model.pt (LSTM)",
+    "pv_source": "Gansu CSV, 96-point block 501, first timestamp: 2008-05-16T00:00:00Z",
+    "load_source": "Quanzhou CSV, day 91, first timestamp: 2016-03-31 00:00:00",
+    "alignment": "Offline data from different regions and years, aligned by interval; not a single site or calendar day.",
+    "scaling": "Fixed dataset: seven-day historical PV and demand peaks are each scaled to 3 kW; PV is capped at 3 kW. This is scenario scaling, not a conversion of source units.",
+    "forecast_note": "PV uses 17 features from the previous day; demand uses four features from the previous seven days. Neither reads target-day inputs. Intraday updates correct observed residuals without retraining.",
+    "evaluation_split": "PV uses a day after the full training-script dataset; demand uses the last complete test day. Evaluation uses scaled scenario kW, not the units of the original model report.",
+    "pv_scale": "0.02366315032252874",
+    "load_scale": "0.0003630089504067626"
+  },
+  "request": {
+    "enterprise": {
+      "reserve_soc": 0.3,
+      "import_target_kw": null,
+      "import_hard_limit_kw": null,
+      "objective": "cost"
+    },
+    "equipment": {
+      "capacity_kwh": 5,
+      "charge_limit_kw": 2,
+      "discharge_limit_kw": 2,
+      "efficiency": 0.95,
+      "initial_soc": 0.5,
+      "max_soc": 0.9,
+      "terminal_soc": 0.5,
+      "grid_import_capacity_kw": 5,
+      "grid_export_capacity_kw": 3
+    }
+  },
+  "replay_hours": 24,
+  "interval_hours": 0.25,
+  "pv_source_range": [
+    "2007-01-02T00:00:00Z",
+    "2020-10-06T22:45:00Z"
+  ],
+  "load_source_range": [
+    "2016-01-01 00:00:00",
+    "2016-03-31 23:45:00"
+  ],
+  "source_rows": {
+    "pv": 482588,
+    "load": 8736
+  },
+  "sha256": {
+    "data/gansu_pv.csv": "df39bac4506d63cf6074a57fea9df4d9534b72d89a1b15ba0bf123ef21b0391f",
+    "data/quanzhou_load.csv": "26600e29d5bbd123940e4d86ff0fd09e9d6f7db981d9513fcc19c38232cac0f0",
+    "data/electricity_prices.csv": "0cc384a387202ba5544d26b5a4fa1271c56133e60713b5c221ae63251c37eeaf",
+    "outputs/pv/best_model.pt": "353f3fb273101b5dcf8e85713afd56b60135ca068d4cee769e804d7622c37eda",
+    "outputs/load/best_model.pt": "5f9ed89c005a02a36bb7426f99a08db9af5088f2101fd89a592bd02e3466b6ce",
+    "backend/optimizer.py": "2cf8ddd10879cf510e1a110b378f7873fce6d15172bec6788cf86925e4803f0b",
+    "backend/data.py": "73916b9e116ac6cbd9662b79dcad7aa7e9c91b63045b9aa5f67db0b2c31161c8",
+    "forecasting/predict.py": "b946b7bd7c794fd3ae1236fd2c85ba8910bbab1c9487c0f7aae8550d9cc69910",
+    "scripts/economic_evaluation.py": "9b0105a5e9fa4fce04a75bc1755a89297c36bcef8f61dcd5a42a1e4b99755bb0"
+  },
+  "endpoint": "exact initial SOC; common reachable-energy actuator envelope",
+  "pv_self_consumption": "PV delivered to load / actual PV generation; proportional battery provenance"
+}

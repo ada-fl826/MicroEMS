@@ -403,6 +403,13 @@ def render_results(state):
                         else "Violated",
                     },
                     {
+                        "Requirement": "Grid export capacity",
+                        "Setting": f"≤ {b['grid_export_capacity_kw']:g} kW",
+                        "Result": "Met"
+                        if metrics["export_limit_satisfied"]
+                        else "Violated",
+                    },
+                    {
                         "Requirement": "Final SOC",
                         "Setting": f"≥ {b['terminal_soc']:.0%}",
                         "Result": (

@@ -141,7 +141,7 @@ def prepare_scenario():
 
 
 def rolling_forecast(original, step, actual_pv, actual_load, pv_capacity_kw=None):
-    """Correct future predictions with the observed residual; current slot is exact."""
+    """Correct predictions from the last observed slot onward."""
     remaining = []
     pv_error = actual_pv - original[step]["pv_kw"]
     load_error = actual_load - original[step]["load_kw"]
@@ -154,3 +154,17 @@ def rolling_forecast(original, step, actual_pv, actual_load, pv_capacity_kw=None
         corrected["load_kw"] = max(0.0, float(point["load_kw"] + weight * load_error))
         remaining.append(corrected)
     return remaining
+
+
+def available_forecast(scenario, step):
+    """Forecast the remaining day using observations available at slot start."""
+    if step == 0:
+        return scenario["forecast"]
+    previous = step - 1
+    return rolling_forecast(
+        scenario["forecast"],
+        previous,
+        scenario["actual_pv_kw"][previous],
+        scenario["actual_load_kw"][previous],
+        scenario["pv_capacity_kw"],
+    )[1:]

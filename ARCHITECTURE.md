@@ -29,7 +29,7 @@ Streamlit → HTTP API → service.py → optimizer.py (Gurobi)
 ```
 
 1. **Create a plan:** Read historical data, run forecasts, scale power to the scenario, and combine it with tariffs. Solve a full-day, day-ahead plan subject to equipment and operating constraints.
-2. **Execute with rolling updates:** Reveal the current interval's observations, correct remaining forecasts using forecast residuals, and optimize the remaining intervals from the current battery state of charge (SOC). Execute only the first interval and update SOC, costs, and history. Future observations are excluded from the current optimization and API responses.
+2. **Execute with rolling updates:** At the start of an interval, use the previous completed interval's forecast residual to correct remaining forecasts and optimize from the current battery state of charge (SOC). Apply the first battery action, then use the completed interval's observations to settle grid flows, check limits, and log costs. The observations become available for the next optimization.
 3. **Persist and display:** Write dispatch time series to `ems_dispatch` and metrics to `ems_metrics`, then publish the `ems_simulations` snapshot. Grafana queries the selected simulation and published version; the frontend reads state through the API.
 
 Only `service.py` advances simulation state. Checks on `expected_step` and storage versions prevent duplicate execution; running simulations become paused after a restart. Write protection relies on process-local locks, so the API requires **one instance with one worker**.

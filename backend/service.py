@@ -5,12 +5,7 @@ from datetime import UTC, datetime
 from threading import Event, RLock, Thread
 from uuid import uuid4
 
-from backend.data import (
-    DT,
-    SLOTS,
-    prepare_scenario,
-    rolling_forecast,
-)
+from backend.data import DT, SLOTS, available_forecast, prepare_scenario
 from backend.evaluation import forecast_accuracy
 from backend.optimizer import solve_dispatch
 from backend.schemas import (
@@ -19,6 +14,7 @@ from backend.schemas import (
     OptimizationError,
     SimulationState,
 )
+from backend.settlement import settle_interval
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +52,9 @@ def public_state(state):
         "soft_excess_steps": sum(p["target_excess_kw"] > 1e-5 for p in points),
         "reserve_satisfied": all(p["soc"] >= e["reserve_soc"] - 1e-5 for p in points),
         "hard_limit_satisfied": all(p["import_kw"] <= hard + 1e-5 for p in points),
+        "export_limit_satisfied": all(
+            p["export_kw"] <= b["grid_export_capacity_kw"] + 1e-5 for p in points
+        ),
     }
     evaluations, prediction_metrics = forecast_accuracy(state)
     return SimulationState.model_validate(
@@ -133,13 +132,7 @@ class SimulationService:
                 return public_state(state)
             request = saved_request(state)
             t = state["step"]
-            forecast = rolling_forecast(
-                state["forecast"],
-                t,
-                state["actual_pv_kw"][t],
-                state["actual_load_kw"][t],
-                state["pv_capacity_kw"],
-            )
+            forecast = available_forecast(state, t)
             try:
                 plan = solve_dispatch(forecast, request, state["soc"])
             except OptimizationError as error:
@@ -164,9 +157,21 @@ class SimulationService:
                     "solver_failed",
                 )
             action["soc"] = soc
+            action.update(
+                settle_interval(
+                    action,
+                    state["actual_pv_kw"][t],
+                    state["actual_load_kw"][t],
+                    action["charge_kw"],
+                    action["discharge_kw"],
+                    request,
+                )
+            )
             state["soc"], state["latest_plan"] = soc, plan
             state["executions"].append(action)
-            state["revisions"].append({"step": t, "plan": plan})
+            state["revisions"].append(
+                {"step": t, "issued_after_slot": t - 1, "plan": plan}
+            )
             state["step"] = t + 1
             state["last_error"] = None
             if state["step"] == SLOTS:

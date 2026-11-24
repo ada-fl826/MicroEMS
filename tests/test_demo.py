@@ -246,10 +246,10 @@ class DemoTests(unittest.TestCase):
         self.assertEqual(one["prediction_metrics"], two["prediction_metrics"])
         self.assertEqual(one["prediction_evaluations"], two["prediction_evaluations"])
 
-    def test_infeasible_step_does_not_advance_or_change_soc(self):
+    def test_infeasible_forecast_does_not_advance_or_change_soc(self):
         state = self.service.create(CreateSimulation())
         hidden = self.repository.get(state["id"])
-        hidden["actual_load_kw"][0] = 100
+        hidden["forecast"][0]["load_kw"] = 100
         self.repository.save(hidden)
         with self.assertRaises(OptimizationError):
             self.service.step(state["id"], 0)
@@ -258,6 +258,35 @@ class DemoTests(unittest.TestCase):
         self.assertEqual(saved["step"], 0)
         self.assertEqual(saved["soc"], state["soc"])
         self.assertEqual(saved["executions"], [])
+
+    def test_unexpected_load_changes_settlement_and_next_forecast(self):
+        one = self.service.create(CreateSimulation())
+        two = self.service.create(CreateSimulation())
+        hidden = self.repository.get(two["id"])
+        hidden["actual_load_kw"][0] = 8
+        self.repository.save(hidden)
+
+        one = self.service.step(one["id"], 0)
+        two = self.service.step(two["id"], 0)
+        self.assertEqual(one["latest_plan"], two["latest_plan"])
+        self.assertEqual(one["soc"], two["soc"])
+        actual = two["executions"][0]
+        planned = two["latest_plan"]["points"][0]
+        for key in ("charge_kw", "discharge_kw"):
+            self.assertEqual(actual[key], planned[key])
+        self.assertEqual(actual["load_kw"], 8)
+        self.assertGreater(actual["cost_yuan"], one["executions"][0]["cost_yuan"])
+        self.assertFalse(two["metrics"]["hard_limit_satisfied"])
+
+        one = self.service.step(one["id"], 1)
+        two = self.service.step(two["id"], 1)
+        point = two["latest_plan"]["points"][0]
+        self.assertNotEqual(
+            point["load_kw"], one["latest_plan"]["points"][0]["load_kw"]
+        )
+        self.assertEqual(
+            two["prediction_evaluations"][1]["rolling_load_kw"], point["load_kw"]
+        )
 
     def test_duplicate_concurrent_steps_cannot_execute_twice(self):
         state = self.service.create(CreateSimulation())

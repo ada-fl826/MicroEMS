@@ -81,6 +81,7 @@ class Plan(BaseModel):
 
 class Revision(BaseModel):
     step: int
+    issued_after_slot: int | None = None
     plan: Plan
 
 
@@ -94,6 +95,7 @@ class Metrics(BaseModel):
     soft_excess_steps: int
     reserve_satisfied: bool
     hard_limit_satisfied: bool
+    export_limit_satisfied: bool
 
 
 class ForecastErrorMetrics(BaseModel):

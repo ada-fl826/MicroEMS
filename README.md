@@ -4,7 +4,7 @@
 
 English | [简体中文](README.zh-CN.md)
 
-`PyTorch` · `Gurobi MILP` · `FastAPI` · `Streamlit` · `InfluxDB` · `Grafana` · `Docker Compose`
+https://felix-ems.austriaeast.cloudapp.azure.com/
 
 ## What I built
 

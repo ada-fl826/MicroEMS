@@ -18,24 +18,21 @@ def error_metrics(records, predicted_key, actual_key):
 
 
 def forecast_accuracy(state):
-    """Use the day-ahead forecast and the previous step's next-slot prediction.
-
-    Plans already persist every forecast with its target slot and issuing step.
-    Reconstructing scores from those snapshots also supports existing saved runs.
-    """
+    """Score the forecast issued before each observed slot."""
     ahead = {point["slot"]: point for point in state["forecast"]}
     revisions = {revision["step"]: revision for revision in state["revisions"]}
     records = []
     for actual in state["executions"]:
         slot = actual["slot"]
         predicted = ahead[slot]
-        # The current revision has already seen this slot's actual measurements.
-        # Only the preceding revision can supply a one-step-ahead prediction.
         rolling = predicted if slot == 0 else None
-        previous = revisions.get(slot - 1)
-        if previous is not None:
+        revision = revisions.get(slot)
+        if revision is None or revision.get("issued_after_slot") != slot - 1:
+            # Legacy revisions included their own slot's observation.
+            revision = revisions.get(slot - 1)
+        if revision is not None:
             rolling = next(
-                (p for p in previous["plan"]["points"] if p["slot"] == slot), None
+                (p for p in revision["plan"]["points"] if p["slot"] == slot), rolling
             )
         records.append(
             {
